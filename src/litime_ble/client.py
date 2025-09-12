@@ -21,6 +21,10 @@ CHAR_RX_WRITE = u16(0xFFE2)  # we write requests
 # 0x0000, 0x0401, 0x1355, 0xAA17
 REQUEST_STATS = bytes([0x00, 0x00, 0x01, 0x04, 0x55, 0x13, 0x17, 0xAA])
 
+# Protocol constants
+MIN_PAYLOAD_LEN = 66
+MAX_RETRIES = 3
+
 
 @dataclass
 class BatteryClient:
@@ -98,34 +102,54 @@ class BatteryClient:
     async def read_once_async(self) -> BatteryStatus:
         if not self._client or not self._client.is_connected:
             raise BatteryConnectionError("Not connected.")
-        ev = asyncio.Event()
-        payload: dict[str, bytes] = {}
+
+        q: asyncio.Queue[bytes] = asyncio.Queue()
 
         def _cb(_, data: bytearray):
-            payload["p"] = bytes(data)
-            ev.set()
+            # push every notification; we'll filter by length
+            try:
+                q.put_nowait(bytes(data))
+            except Exception:
+                pass
 
         try:
             await self._client.start_notify(CHAR_TX_NOTIFY, _cb)
-            # write request
-            await self._client.write_gatt_char(
-                CHAR_RX_WRITE, REQUEST_STATS, response=True
-            )
             try:
-                await asyncio.wait_for(ev.wait(), timeout=self.request_timeout_s)
-            except asyncio.TimeoutError as e:
-                raise BatteryTimeoutError("No notification received.") from e
+                # send request and wait for a full frame, allow a few retries
+                for attempt in range(1, MAX_RETRIES + 1):
+                    await self._client.write_gatt_char(
+                        CHAR_RX_WRITE, REQUEST_STATS, response=True
+                    )
+
+                    try:
+                        # loop until timeout looking for a long payload
+                        deadline = (
+                            asyncio.get_event_loop().time() + self.request_timeout_s
+                        )
+                        while True:
+                            timeout = max(0, deadline - asyncio.get_event_loop().time())
+                            if timeout == 0:
+                                break
+                            pkt = await asyncio.wait_for(q.get(), timeout=timeout)
+                            if len(pkt) >= MIN_PAYLOAD_LEN:
+                                return parse_payload(pkt)
+                            # else: short packet (e.g., 9 bytes). Keep waiting within this attempt.
+                    except asyncio.TimeoutError:
+                        # try again (re-send request)
+                        if attempt == MAX_RETRIES:
+                            raise BatteryTimeoutError(
+                                "No full status payload received."
+                            )  # fall through to finally
+                        # small backoff before retry
+                        await asyncio.sleep(0.2)
+                # If loop ends without return, raise
+                raise BatteryTimeoutError("No full status payload received.")
             finally:
                 await self._client.stop_notify(CHAR_TX_NOTIFY)
         except BatteryTimeoutError:
             raise
         except Exception as e:
             raise ProtocolError(f"exchange failed: {e}") from e
-
-        raw = payload.get("p", b"")
-        if not raw:
-            raise ProtocolError("Empty payload.")
-        return parse_payload(raw)
 
     async def stream(self, interval_s: float = 3.0):
         """Async generator yielding BatteryStatus repeatedly."""
