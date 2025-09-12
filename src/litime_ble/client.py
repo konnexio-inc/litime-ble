@@ -114,11 +114,21 @@ class BatteryClient:
 
         try:
             await self._client.start_notify(CHAR_TX_NOTIFY, _cb)
+            # Give notifications time to set up before sending request
+            await asyncio.sleep(0.1)
+
             try:
                 # send request and wait for a full frame, allow a few retries
                 for attempt in range(1, MAX_RETRIES + 1):
+                    # Clear any stale notifications before sending request
+                    while not q.empty():
+                        try:
+                            q.get_nowait()
+                        except asyncio.QueueEmpty:
+                            break
+
                     await self._client.write_gatt_char(
-                        CHAR_RX_WRITE, REQUEST_STATS, response=True
+                        CHAR_RX_WRITE, REQUEST_STATS, response=False
                     )
 
                     try:
