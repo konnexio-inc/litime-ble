@@ -1,0 +1,18 @@
+source 'https://rubygems.org'
+
+# Minimal Gemfile for building the docs site in CI or locally
+# Pins are intentional to keep builds consistent; adjust versions if necessary.
+
+gem 'jekyll', '>= 4.2'
+
+# Remote theme
+gem 'jekyll-remote-theme'
+
+# Caching include fragments
+gem 'jekyll-include-cache'
+
+# Native Windows file watcher (optional, only needed on Windows dev machines)
+gem 'wdm', '>= 0.1', platforms: [:mingw, :mswin]
+
+# Keep bundle reproducible across CI runs
+# To generate Gemfile.lock and add platforms, run `bundle lock --add-platform` as shown below.

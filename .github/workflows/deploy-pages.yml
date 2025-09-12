@@ -20,14 +20,16 @@ jobs:
           bundler-cache: true
           working-directory: docs
 
-      - name: Install dependencies
-        run: bundle install --jobs 4 --retry 3
-        working-directory: docs
+      - name: Install Bundler and gems
+        run: |
+          cd docs
+          gem install bundler --no-document
+          bundle install --jobs 4 --retry 3
 
-      - name: Build Jekyll site
-        run: bundle exec jekyll build --source docs --destination _site
-        env:
-          JEKYLL_ENV: production
+      - name: Build site with bundler
+        run: |
+          cd docs
+          bundle exec jekyll build --destination _site
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
