@@ -1,6 +1,7 @@
 ---
 title: "litime-ble"
 layout: home
+permalink: /
 ---
 
 Lightweight Python library and CLI for reading Li Time BLE battery statistics.
