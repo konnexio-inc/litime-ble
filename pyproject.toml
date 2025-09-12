@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "litime-ble"
+version = "0.1.0"
+description = "Li Time Bluetooth battery reader via BLE (Python, Bleak)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Cameron K. Brooks" }]
+license = { text = "MIT" }
+dependencies = ["bleak>=0.22"]
+
+[project.scripts]
+litime-battery = "litime_ble.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
