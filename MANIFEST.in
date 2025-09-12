@@ -1,0 +1,4 @@
+include README.md
+include LICENSE
+recursive-include examples *.py *.md
+recursive-include docs *.md *.yml *.js *.scss

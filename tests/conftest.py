@@ -3,6 +3,16 @@ from typing import List, Optional
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def suppress_logging():
+    """Suppress logging during tests to keep output clean."""
+    import litime_ble
+
+    # Set to ERROR level to suppress DEBUG/INFO/WARNING during tests
+    litime_ble.configure_logging(litime_ble.ERROR)
+    yield
+
+
 def build_payload(
     voltage_mv: int = 12000,
     current_ma: int = 0,
@@ -46,6 +56,8 @@ class FakeBleakClient:
         self.is_connected = False
         self._notify_callback = None
         self.next_payload = None
+        # Mock services for GATT validation
+        self.services = {"0000ffe0-0000-1000-8000-00805f9b34fb": FakeService()}
 
     async def connect(self, timeout: Optional[float] = None):
         self.is_connected = True
@@ -54,7 +66,7 @@ class FakeBleakClient:
         self.is_connected = False
 
     async def get_services(self):
-        return None
+        return self.services
 
     async def start_notify(self, char, callback):
         # store the callback; callback signature: (sender, bytearray)
@@ -69,6 +81,20 @@ class FakeBleakClient:
         if self.next_payload is not None and self._notify_callback is not None:
             # the real Bleak callback provides sender and a bytearray
             self._notify_callback(None, bytearray(self.next_payload))
+
+
+class FakeService:
+    def __init__(self):
+        self.uuid = "0000ffe0-0000-1000-8000-00805f9b34fb"
+        self.characteristics = [
+            FakeCharacteristic("0000ffe1-0000-1000-8000-00805f9b34fb"),
+            FakeCharacteristic("0000ffe2-0000-1000-8000-00805f9b34fb"),
+        ]
+
+
+class FakeCharacteristic:
+    def __init__(self, uuid: str):
+        self.uuid = uuid
 
 
 class FakeDevice:

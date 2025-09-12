@@ -4,7 +4,9 @@ layout: home
 permalink: /
 ---
 
-Lightweight Python library and CLI for reading Li Time BLE battery statistics.
+Lightweight Python library and CLI for reading Li-Time BLE battery statistics via Bluetooth Low Energy.
+
+**New in 0.2.0**: Device discovery, enhanced logging, comprehensive examples, and CLI module support.
 
 ## Contents
 

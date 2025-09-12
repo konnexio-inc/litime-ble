@@ -2,36 +2,58 @@
 
 This document contains protocol details, usage examples, API notes, and developer instructions.
 
+**New in 0.2.0**: Device discovery, enhanced logging, comprehensive examples, and CLI module support.
+
 ## Installation
 
-Install from the project root:
+```bash
+pip install litime-ble
+```
+
+Or install from source:
 
 ```bash
 pip install .
 ```
 
-## Usage
+## Quick Start
 
-### Synchronous (convenience)
+### Device Discovery (New in 0.2.0)
+
+Find your Li-Time battery automatically:
+
+```python
+from litime_ble import find_litime_batteries_sync
+
+batteries = find_litime_batteries_sync(timeout=5.0)
+if batteries:
+    mac_address = batteries[0]['address']
+    print(f"Found battery: {mac_address}")
+```
+
+### Battery Reading
+
+#### Synchronous (convenience)
 
 ```python
 from litime_ble import BatteryClient
 
-with BatteryClient.sync(address="AA:BB:CC:DD:EE:FF") as client:
+with BatteryClient.sync(address="C8:47:80:15:5C:0F") as client:
     status = client.read_once()
+    print(f"Battery: {status.voltage_v:.1f}V, {status.soc_percent:.0f}%")
     print(status.json())
 ```
 
 > Note: `sync()` creates a temporary event loop and is intended for scripts/CLI. In a running asyncio application use the async API.
 
-### Asynchronous
+#### Asynchronous (recommended)
 
 ```python
 import asyncio
 from litime_ble import BatteryClient
 
 async def main():
-    client = BatteryClient(address="AA:BB:CC:DD:EE:FF")
+    client = BatteryClient(address="C8:47:80:15:5C:0F")
     async with client.session():
         status = await client.read_once_async()
         print(status.json())
@@ -39,12 +61,37 @@ async def main():
 asyncio.run(main())
 ```
 
+### Logging (New in 0.2.0)
+
+Enable debug logging for troubleshooting:
+
+```python
+from litime_ble import configure_logging, DEBUG
+
+configure_logging(DEBUG)
+# Your battery operations will now show detailed logs
+```
+
 ## CLI
 
-Read once and print JSON:
+### Module CLI (New in 0.2.0)
 
 ```bash
-litime-battery read --address AA:BB:CC:DD:EE:FF --json
+# Discover batteries
+python -m litime_ble discover --battery-only
+
+# Read battery status
+python -m litime_ble read --address C8:47:80:15:5C:0F --json
+```
+
+### Installed CLI
+
+```bash
+# Read battery
+litime-battery read --address C8:47:80:15:5C:0F --json
+
+# Discover devices
+litime-battery discover --battery-only
 ```
 
 ## API summary

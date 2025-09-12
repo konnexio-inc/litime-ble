@@ -1,6 +1,6 @@
 title: "litime-ble"
 name: "litime-ble"
-description: "Lightweight Python library and CLI for reading Li Time BLE battery statistics."
+description: "Lightweight Python library and CLI for reading Li-Time BLE battery statistics via Bluetooth Low Energy. Features device discovery, enhanced logging, and comprehensive examples."
 url: "https://konnexio-inc.github.io"
 baseurl: "/litime-ble"
 repository: "konnexio-inc/litime-ble"
