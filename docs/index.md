@@ -14,3 +14,4 @@ Lightweight Python library and CLI for reading Li-Time BLE battery statistics vi
 - [API summary]({{ "/api/" | relative_url }})
 - [Developer & CI notes]({{ "/developer/" | relative_url }})
 - [Reference implementation (JavaScript)]({{ "/reference/" | relative_url }})
+- [Repository statistics]({{ "/repo-stats/" | relative_url }})

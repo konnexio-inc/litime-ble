@@ -6,6 +6,8 @@ Lightweight Python library and CLI to read Li-Time BLE battery statistics via Bl
 
 ## Install
 
+This library is listed as a package on PyPi and can be installed using pip
+
 ```bash
 pip install litime-ble
 ```
