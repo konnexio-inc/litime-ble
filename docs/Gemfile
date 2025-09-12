@@ -13,6 +13,3 @@ gem 'jekyll-include-cache'
 
 # Native Windows file watcher (optional, only needed on Windows dev machines)
 gem 'wdm', '>= 0.1', platforms: [:mingw, :mswin]
-
-# Keep bundle reproducible across CI runs
-# To generate Gemfile.lock and add platforms, run `bundle lock --add-platform` as shown below.
