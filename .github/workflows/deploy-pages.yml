@@ -30,7 +30,7 @@ jobs:
           cd docs
           gem install bundler --no-document
           bundle install
-          bundle exec jekyll build --destination ../_site --baseurl "/litime-ble"
+          bundle exec jekyll build --destination ../_site
         env:
           JEKYLL_ENV: production
 

@@ -1,5 +1,7 @@
 ---
-title: Developer
+title: "Developer"
+layout: single
+permalink: /developer/
 ---
 
 ## Tests
@@ -30,4 +32,4 @@ ruff check src
 
 This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml` that runs ruff and pytest on Python 3.10, 3.11 and 3.12.
 
-To publish docs to GitHub Pages, a second workflow (`.github/workflows/deploy-pages.yml`) is provided to build and push the contents of the `docs/` folder to the Pages branch.
+To publish docs to GitHub Pages, a second workflow (`.github/workflows/deploy-pages.yml`) is provided to build and push the contents of the `docs/` folder to the site.

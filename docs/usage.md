@@ -1,5 +1,7 @@
 ---
-title: Usage
+title: "Usage"
+layout: single
+permalink: /usage/
 ---
 
 Install from the repository root:
