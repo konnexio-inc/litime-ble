@@ -1,0 +1,35 @@
+title: "litime-ble"
+name: "litime-ble"
+description: "Lightweight Python library and CLI for reading Li Time BLE battery statistics."
+url: "https://konnexio-inc.github.io"
+baseurl: "/litime-ble" # very important for project pages
+repository: "konnexio-inc/litime-ble"
+
+remote_theme: "mmistakes/minimal-mistakes@4.27.3"
+
+plugins:
+  - jekyll-include-cache
+  - jekyll-remote-theme
+
+locale: "en"
+markdown: kramdown
+permalink: /:categories/:title/
+
+author:
+  name: "Konnexio Inc"
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "single"
+      author_profile: false
+      toc: true
+      permalink: /:basename/
+
+# Exclude junk
+exclude:
+  - README.md
+  - TODO.md
