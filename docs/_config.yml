@@ -2,7 +2,7 @@ title: "litime-ble"
 name: "litime-ble"
 description: "Lightweight Python library and CLI for reading Li Time BLE battery statistics."
 url: "https://konnexio-inc.github.io"
-baseurl: "/litime-ble" # very important for project pages
+baseurl: "/litime-ble"
 repository: "konnexio-inc/litime-ble"
 
 remote_theme: "mmistakes/minimal-mistakes@4.27.3"

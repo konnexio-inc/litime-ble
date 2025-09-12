@@ -5,37 +5,47 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      - name: Set up Ruby
+      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
-          bundler-cache: true
-          working-directory: docs
 
-      - name: Install Bundler and gems
+      - name: Install dependencies and build
         run: |
           cd docs
           gem install bundler --no-document
-          bundle install --jobs 4 --retry 3
-
-      - name: Build site with bundler
-        run: |
-          cd docs
-          bundle exec jekyll build --destination ../_site
+          bundle install
+          bundle exec jekyll build --destination ../_site --baseurl "/litime-ble"
         env:
           JEKYLL_ENV: production
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
