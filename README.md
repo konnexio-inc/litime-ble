@@ -62,4 +62,8 @@ ruff check src
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE). It follows the same license as the original codebase it was based on: [litime-bluetooth-battery](https://github.com/chadj/litime-bluetooth-battery).
+This project is licensed under the [MIT License](./LICENSE).  
+It follows the same license as the original codebase it was based on: [litime-bluetooth-battery](https://github.com/chadj/litime-bluetooth-battery).
+
+Copyright (c) 2024 Chad Johnson  
+Copyright (c) 2025 Konnexio Inc.
