@@ -1,4 +1,4 @@
-name: Publish to TestPyPI / PyPI via OIDC
+name: Publish to TestPyPI / PyPI via Trusted Publisher
 
 on:
   push:
@@ -6,110 +6,65 @@ on:
       - "v*"
       - "test-*"
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
-  build-and-publish:
+  build:
+    name: Build distributions
     runs-on: ubuntu-latest
-    environment: publish
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
-          pip install build twine jq
-
+          pip install build
       - name: Build distributions
         run: python -m build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-dists
+          path: dist/
 
-      - name: Publish via OIDC (TestPyPI / PyPI)
-        env:
-          # These should be added as repository secrets after you create the Publisher entries
-          # in TestPyPI and PyPI. See the repository Settings -> Secrets -> Actions to add them.
-          TESTPYPI_AUDIENCE: ${{ secrets.TESTPYPI_AUDIENCE }}
-          TESTPYPI_EXCHANGE_URL: ${{ secrets.TESTPYPI_EXCHANGE_URL }}
-          PYPI_AUDIENCE: ${{ secrets.PYPI_AUDIENCE }}
-          PYPI_EXCHANGE_URL: ${{ secrets.PYPI_EXCHANGE_URL }}
-        run: |
-          set -euo pipefail
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/test-') || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write
+      contents: read
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/<your-package-name>
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: package-dists
+          path: dist/
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
 
-          echo "Running publish flow for ref: ${GITHUB_REF}"
-
-          request_id_token() {
-            AUD=$1
-            echo "Requesting ID token for audience: ${AUD}"
-            resp=$(curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUD}")
-            id_token=$(echo "$resp" | jq -r '.value // empty')
-            if [ -z "${id_token}" ]; then
-              echo "Failed to obtain id token from runner: $resp"
-              return 1
-            fi
-            echo "$id_token"
-          }
-
-          exchange_for_upload_token() {
-            EXCHANGE_URL=$1
-            ID_TOKEN=$2
-            echo "Exchanging id token at: ${EXCHANGE_URL}"
-            # POST the id token to the exchange endpoint. The exchange endpoint response
-            # format can vary; try common JSON keys for an upload token.
-            resp=$(curl -sS -X POST "${EXCHANGE_URL}" -H "Authorization: Bearer ${ID_TOKEN}" -H "Content-Type: application/json")
-            # Try common JSON paths - adjust if PyPI/TestPyPI UI indicates a different field.
-            upload_token=$(echo "$resp" | jq -r '.upload_token // .token // .access_token // empty')
-            if [ -z "${upload_token}" ]; then
-              echo "Exchange failed or returned no upload token: $resp"
-              return 1
-            fi
-            echo "$upload_token"
-          }
-
-          upload_with_token() {
-            TARGET=$1
-            TOKEN=$2
-            echo "Uploading to ${TARGET} with temporary token"
-            if [ "${TARGET}" = "testpypi" ]; then
-              python -m twine upload --repository testpypi -u __token__ -p "${TOKEN}" dist/*
-            else
-              python -m twine upload -u __token__ -p "${TOKEN}" dist/*
-            fi
-          }
-
-          if [[ "${GITHUB_REF}" == refs/tags/test-* ]]; then
-            # Test-only publish: require TESTPYPI_AUDIENCE & TESTPYPI_EXCHANGE_URL
-            if [ -z "${TESTPYPI_AUDIENCE}" ] || [ -z "${TESTPYPI_EXCHANGE_URL}" ]; then
-              echo "Missing TestPyPI exchange configuration. Add TESTPYPI_AUDIENCE and TESTPYPI_EXCHANGE_URL as repository secrets."
-              exit 1
-            fi
-            id_token=$(request_id_token "${TESTPYPI_AUDIENCE}") || exit 1
-            upload_token=$(exchange_for_upload_token "${TESTPYPI_EXCHANGE_URL}" "${id_token}") || exit 1
-            upload_with_token testpypi "${upload_token}"
-
-          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            # Full release: publish to TestPyPI first, then to PyPI
-            if [ -z "${TESTPYPI_AUDIENCE}" ] || [ -z "${TESTPYPI_EXCHANGE_URL}" ] || [ -z "${PYPI_AUDIENCE}" ] || [ -z "${PYPI_EXCHANGE_URL}" ]; then
-              echo "Missing exchange configuration. Ensure TESTPYPI_*/PYPI_* secrets are configured."
-              exit 1
-            fi
-
-            echo "Step 1: TestPyPI"
-            id_token_test=$(request_id_token "${TESTPYPI_AUDIENCE}") || exit 1
-            upload_token_test=$(exchange_for_upload_token "${TESTPYPI_EXCHANGE_URL}" "${id_token_test}") || exit 1
-            upload_with_token testpypi "${upload_token_test}"
-
-            echo "Step 2: PyPI"
-            id_token_pypi=$(request_id_token "${PYPI_AUDIENCE}") || exit 1
-            upload_token_pypi=$(exchange_for_upload_token "${PYPI_EXCHANGE_URL}" "${id_token_pypi}") || exit 1
-            upload_with_token pypi "${upload_token_pypi}"
-
-          else
-            echo "Tag not recognized for publishing: ${GITHUB_REF}"
-            exit 1
-          fi
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write
+      contents: read
+    environment:
+      name: pypi
+      url: https://pypi.org/project/<your-package-name>
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: package-dists
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
