@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.1] - 2025-09-12
+
+### Fixed
+
+- **Event Loop Compatibility**: Fixed CLI compatibility with environments that have existing event loops (e.g., ROS2)
+  - Automatic detection of running event loops
+  - Threaded execution approach when event loop conflicts are detected
+  - Maintains full functionality in both standalone and framework environments
+- **Deprecated API Warning**: Replaced deprecated `get_services()` call with `services` property
+  - Eliminates FutureWarning from Bleak library
+
+### Enhanced
+
+- **Debug Logging**: Added event loop detection logging for troubleshooting
+  - Shows which execution approach is being used (direct vs threaded)
+
 ## [0.2.0] - 2025-09-12
 
 ### Added

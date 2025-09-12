@@ -42,7 +42,9 @@ def test_read_once_sync(payload_builder):
 @pytest.mark.asyncio
 async def test_read_once_async_and_timeout(payload_builder):
     payload = payload_builder(voltage_mv=12000)
-    c = BatteryClient(address="FA:KE:DD:RE:SS", request_timeout_s=0.5)  # Increased from 0.1
+    c = BatteryClient(
+        address="FA:KE:DD:RE:SS", request_timeout_s=0.5
+    )  # Increased from 0.1
     await c.connect()
     try:
         # don't set next_payload, so read_once_async should timeout

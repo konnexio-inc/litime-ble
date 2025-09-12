@@ -67,15 +67,16 @@ class BatteryClient:
 
             # Verify required services are available
             try:
-                await self._client.get_services()  # type: ignore[attr-defined]
+                # Use the services property instead of deprecated get_services()
+                services = self._client.services
 
                 # Validate required characteristics exist
-                if SERVICE_UUID not in [s.uuid for s in self._client.services]:
+                if SERVICE_UUID not in [s.uuid for s in services]:
                     logger.warning(
                         "Service %s not found in device services", SERVICE_UUID
                     )
                 else:
-                    service = self._client.services.get_service(SERVICE_UUID)
+                    service = services.get_service(SERVICE_UUID)
                     if service is not None:
                         chars = [c.uuid for c in service.characteristics]
                         if CHAR_NOTIFY not in chars:
@@ -115,28 +116,93 @@ class BatteryClient:
     @contextmanager
     def sync(self) -> Iterator["BatteryClient"]:
         # Synchronous context manager wrapping the async connect/disconnect
-        loop = asyncio.new_event_loop()
         try:
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.connect())
+            # Check if there's already a running event loop
+            asyncio.get_running_loop()
+            # If we get here, there's an active loop - we need to use a different approach
+            import concurrent.futures
+
+            def run_in_thread():
+                # Create a new event loop in a separate thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # Create a new client instance for the thread
+                    thread_client = BatteryClient(address=self.address, name=self.name)
+                    loop.run_until_complete(thread_client.connect())
+                    return thread_client, loop
+                except Exception:
+                    loop.close()
+                    raise
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_in_thread)
+                thread_client, loop = future.result()
+
+                try:
+                    yield thread_client
+                finally:
+                    # Disconnect in the same thread
+                    def cleanup():
+                        try:
+                            loop.run_until_complete(thread_client.disconnect())
+                        finally:
+                            loop.close()
+
+                    cleanup_future = executor.submit(cleanup)
+                    cleanup_future.result()
+
+        except RuntimeError:
+            # No running loop, safe to create a new one in current thread
+            loop = asyncio.new_event_loop()
             try:
-                yield self
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self.connect())
+                try:
+                    yield self
+                finally:
+                    loop.run_until_complete(self.disconnect())
             finally:
-                loop.run_until_complete(self.disconnect())
-        finally:
-            loop.close()
-            asyncio.set_event_loop(None)
+                loop.close()
+                asyncio.set_event_loop(None)
 
     # Sync helper: one-shot read
     def read_once(self) -> BatteryStatus:
-        # Run the async read_once_async in a fresh event loop and return result
-        loop = asyncio.new_event_loop()
+        # Run the async read_once_async and return result
         try:
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.read_once_async())
-        finally:
-            loop.close()
-            asyncio.set_event_loop(None)
+            # Check if there's already a running event loop
+            asyncio.get_running_loop()
+            # If we get here, there's an active loop - we need to use a different approach
+            logger.debug(
+                "Event loop detected, using threaded approach for sync operation"
+            )
+            import concurrent.futures
+
+            def run_in_thread():
+                # Create a new event loop in a separate thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # Create a new client instance for the thread
+                    client = BatteryClient(address=self.address, name=self.name)
+                    return loop.run_until_complete(client.read_once_async())
+                finally:
+                    loop.close()
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_in_thread)
+                return future.result()
+
+        except RuntimeError:
+            # No running loop, safe to create a new one in current thread
+            logger.debug("No event loop detected, using direct approach")
+            loop = asyncio.new_event_loop()
+            try:
+                asyncio.set_event_loop(loop)
+                return loop.run_until_complete(self.read_once_async())
+            finally:
+                loop.close()
+                asyncio.set_event_loop(None)
 
     async def read_once_async(self) -> BatteryStatus:
         if not self._client or not self._client.is_connected:
