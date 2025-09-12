@@ -35,7 +35,7 @@ def build_payload(
         if i >= 16:
             break
         off = base + 2 * i
-        buf[off:off + 2] = int(mv).to_bytes(2, "little", signed=False)
+        buf[off : off + 2] = int(mv).to_bytes(2, "little", signed=False)
 
     return bytes(buf)
 

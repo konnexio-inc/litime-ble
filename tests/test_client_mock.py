@@ -21,7 +21,13 @@ def test_sync_connect_disconnect():
 
 
 def test_read_once_sync(payload_builder):
-    payload = payload_builder(voltage_mv=25600, current_ma=-12345, cell_volts_mv=[3300, 3301], remaining_ah_x100=5000, capacity_ah_x100=10000)
+    payload = payload_builder(
+        voltage_mv=25600,
+        current_ma=-12345,
+        cell_volts_mv=[3300, 3301],
+        remaining_ah_x100=5000,
+        capacity_ah_x100=10000,
+    )
     c = BatteryClient(address="FA:KE:DD:RE:SS")
     # Prepare the fake client to supply the payload when written to
     # Use sync context to connect
