@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.2] - 2025-09-12
+
+### Fixed
+
+- **ROS2 Event Loop Compatibility**: Completely resolved event loop conflicts in ROS2 environments
+  - Improved threaded execution approach for sync operations
+  - Smart detection of connected state to maintain test compatibility
+  - Fixed CLI to use simplified read approach avoiding double connection attempts
+  - All operations now properly isolated to prevent D-Bus/event loop interference
+
+### Enhanced
+
+- **Robust Execution Strategy**: Always uses threaded approach for new connections to ensure compatibility across all environments
+- **Test Compatibility**: Maintains backward compatibility with existing test suite and mock objects
+
 ## [0.2.1] - 2025-09-12
 
 ### Fixed

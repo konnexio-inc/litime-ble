@@ -46,8 +46,7 @@ def main() -> None:
     if args.cmd == "read":
         client = BatteryClient(address=args.address, name=args.name)
         try:
-            with client.sync() as c:
-                s = c.read_once()
+            s = client.read_once()
             logger.debug("Battery read completed successfully")
         except Exception as e:
             logger.error("Battery read failed: %s: %s", type(e).__name__, e)
