@@ -37,7 +37,7 @@ jobs:
       contents: read
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/<your-package-name>
+      url: https://test.pypi.org/project/litime-ble
     steps:
       - name: Download built artifacts
         uses: actions/download-artifact@v5
@@ -59,7 +59,7 @@ jobs:
       contents: read
     environment:
       name: pypi
-      url: https://pypi.org/project/<your-package-name>
+      url: https://pypi.org/project/litime-ble
     steps:
       - name: Download built artifacts
         uses: actions/download-artifact@v5
