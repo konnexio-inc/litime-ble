@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional
 
 import pytest
@@ -56,26 +57,38 @@ class FakeBleakClient:
         self.is_connected = False
         self._notify_callback = None
         self.next_payload = None
+        self._loop = None
         # Mock services for GATT validation
         self.services = {"0000ffe0-0000-1000-8000-00805f9b34fb": FakeService()}
 
+    def _check_loop(self):
+        # A real Bleak connection is bound to the event loop that opened it;
+        # using it from any other loop fails with "attached to a different loop".
+        if asyncio.get_running_loop() is not self._loop:
+            raise RuntimeError("Future attached to a different loop")
+
     async def connect(self, timeout: Optional[float] = None):
+        self._loop = asyncio.get_running_loop()
         self.is_connected = True
 
     async def disconnect(self):
+        self._check_loop()
         self.is_connected = False
 
     async def get_services(self):
         return self.services
 
     async def start_notify(self, char, callback):
+        self._check_loop()
         # store the callback; callback signature: (sender, bytearray)
         self._notify_callback = callback
 
     async def stop_notify(self, char):
+        self._check_loop()
         self._notify_callback = None
 
     async def write_gatt_char(self, char, data, response: bool = False):
+        self._check_loop()
         # simulate device response by calling the notification callback if payload available
         # call synchronously to mimic notification arrival
         if self.next_payload is not None and self._notify_callback is not None:

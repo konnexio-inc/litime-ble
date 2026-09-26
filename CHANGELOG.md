@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **`sync()` reads failing with "attached to a different loop"** ([#2](https://github.com/konnexio-inc/litime-ble/issues/2))
+  - `read_once()` inside `with client.sync()` now runs on the event loop that opened the connection, instead of a new one
+  - `sync()` keeps one background event loop running for the whole block, so repeated reads reuse the connection
+  - `sync()` now uses the client's own settings (e.g. `request_timeout_s`) instead of a copy with defaults
+  - `read_once()` on a connected client raises a clear `RuntimeError` instead of hanging or failing mid-exchange when called from the connection's own loop, or after that loop has stopped
+- **Docs**: the `sync()` example called it as `BatteryClient.sync(address=...)`, which raises `TypeError`; it is now `BatteryClient(address=...).sync()`
+
 ## [0.2.2] - 2025-09-12
 
 ### Fixed

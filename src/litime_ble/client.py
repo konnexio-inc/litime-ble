@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import threading
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import AsyncIterator, Optional, Iterator
@@ -35,6 +36,7 @@ class BatteryClient:
     name: Optional[str] = None
     request_timeout_s: float = 5.0
     _client: Optional[BleakClient] = None
+    _loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def connect(self) -> None:
         if not self.address and not self.name:
@@ -60,6 +62,8 @@ class BatteryClient:
 
         logger.debug("Found device: %s at %s", device.name, device.address)
         self._client = BleakClient(device)
+        # The connection is bound to this loop; read_once() must run on it.
+        self._loop = asyncio.get_running_loop()
 
         try:
             await self._client.connect(timeout=10.0)
@@ -104,6 +108,7 @@ class BatteryClient:
             await self._client.disconnect()
             logger.debug("Disconnected from battery")
         self._client = None
+        self._loop = None
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator["BatteryClient"]:
@@ -115,66 +120,48 @@ class BatteryClient:
 
     @contextmanager
     def sync(self) -> Iterator["BatteryClient"]:
-        # Always use threaded approach to avoid any event loop conflicts
-        logger.debug("Using threaded approach for sync context manager")
-        import concurrent.futures
-
-        def run_in_thread():
-            import asyncio
-
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # The BLE connection is bound to the loop that opens it, so run one loop
+        # in a background thread for the whole session; read_once() on the
+        # yielded client dispatches to it.
+        logger.debug("Starting background event loop for sync session")
+        loop = asyncio.new_event_loop()
+        thread = threading.Thread(
+            target=loop.run_forever, name="litime-ble-sync", daemon=True
+        )
+        thread.start()
+        try:
             try:
-                # Create a new client instance for the thread
-                thread_client = BatteryClient(address=self.address, name=self.name)
-                loop.run_until_complete(thread_client.connect())
-                return thread_client, loop
-            except Exception:
-                loop.close()
-                raise
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(run_in_thread)
-            thread_client, loop = future.result()
-
-            try:
-                yield thread_client
+                asyncio.run_coroutine_threadsafe(self.connect(), loop).result()
+                yield self
             finally:
-                # Disconnect in the same thread
-                def cleanup():
-                    try:
-                        loop.run_until_complete(thread_client.disconnect())
-                    finally:
-                        loop.close()
-
-                cleanup_future = executor.submit(cleanup)
-                cleanup_future.result()
+                asyncio.run_coroutine_threadsafe(self.disconnect(), loop).result()
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            thread.join()
+            loop.close()
 
     # Sync helper: one-shot read
     def read_once(self) -> BatteryStatus:
-        # Check if we're already connected (for example in tests)
         if self._client and self._client.is_connected:
-            # Use direct async approach if already connected
-            logger.debug("Using direct async approach (already connected)")
-            import asyncio
-
+            # Already connected: the read must run on the loop that connected.
             try:
-                # If there's a running loop, we can't use run_until_complete
-                asyncio.get_running_loop()
+                running = asyncio.get_running_loop()
+            except RuntimeError:
+                running = None
+            if running is not None and running is self._loop:
                 raise RuntimeError(
-                    "Cannot use read_once() with existing connection when event loop is running"
+                    "read_once() would block the event loop that owns this "
+                    "connection; use 'await read_once_async()' instead"
                 )
-            except RuntimeError as e:
-                if "Cannot use read_once()" in str(e):
-                    raise
-                # No running loop, safe to use run_until_complete
-                loop = asyncio.new_event_loop()
-                try:
-                    asyncio.set_event_loop(loop)
-                    return loop.run_until_complete(self.read_once_async())
-                finally:
-                    loop.close()
-                    asyncio.set_event_loop(None)
+            if self._loop is None or not self._loop.is_running():
+                raise RuntimeError(
+                    "the event loop that opened this connection is no longer "
+                    "running; use 'with client.sync():' for synchronous reads"
+                )
+            logger.debug("Running read on the connection's event loop")
+            return asyncio.run_coroutine_threadsafe(
+                self.read_once_async(), self._loop
+            ).result()
 
         # Not connected, use threaded approach to avoid any event loop conflicts
         # This is especially important in ROS2 environments

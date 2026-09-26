@@ -39,7 +39,7 @@ if batteries:
 from litime_ble import BatteryClient
 
 # Synchronous (simple)
-with BatteryClient.sync(address="C8:47:80:15:5C:0F") as client:
+with BatteryClient(address="C8:47:80:15:5C:0F").sync() as client:
     status = client.read_once()
     print(f"Battery: {status.voltage_v:.1f}V, {status.soc_percent:.0f}%")
     print(status.json())  # Full data as JSON
