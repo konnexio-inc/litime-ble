@@ -41,13 +41,13 @@ all_devices = discover_devices_sync(timeout=5.0)
 ```python
 from litime_ble import BatteryClient
 
-with BatteryClient.sync(address="C8:47:80:15:5C:0F") as client:
+with BatteryClient(address="C8:47:80:15:5C:0F").sync() as client:
     status = client.read_once()
     print(f"Battery: {status.voltage_v:.1f}V, {status.soc_percent:.0f}%")
     print(status.json())
 ```
 
-> Note: `sync()` creates a temporary event loop and is intended for scripts/CLI. In a running asyncio application use the async API.
+> Note: `sync()` keeps one connection open for the whole `with` block, running its own event loop in a background thread, so `read_once()` can be called repeatedly inside it. It is intended for scripts/CLI; in a running asyncio application use the async API.
 
 ### Asynchronous (recommended)
 
