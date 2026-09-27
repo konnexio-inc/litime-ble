@@ -7,7 +7,7 @@ name = "litime-ble"
 version = "0.2.2"
 description = "Li Time Bluetooth battery reader via BLE (Python, Bleak)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "Cameron K. Brooks" }]
 license = "MIT"
 keywords = ["bluetooth", "ble", "battery", "litime", "solar", "power"]
@@ -17,7 +17,6 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

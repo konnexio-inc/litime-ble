@@ -11,6 +11,10 @@
   - `read_once()` on a connected client raises a clear `RuntimeError` instead of hanging or failing mid-exchange when called from the connection's own loop, or after that loop has stopped
 - **Docs**: the `sync()` example called it as `BatteryClient.sync(address=...)`, which raises `TypeError`; it is now `BatteryClient(address=...).sync()`
 
+### Changed
+
+- **Python 3.10 or newer is required** ([#4](https://github.com/konnexio-inc/litime-ble/issues/4)). The package declared 3.9 support but has never imported on 3.9 (`@dataclass(slots=True)` needs 3.10); pip now refuses the install instead of installing a package that fails on import
+
 ## [0.2.2] - 2025-09-12
 
 ### Fixed
