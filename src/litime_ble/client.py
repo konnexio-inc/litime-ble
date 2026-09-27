@@ -176,7 +176,11 @@ class BatteryClient:
             asyncio.set_event_loop(loop)
             try:
                 # Create a new client instance for the thread
-                client = BatteryClient(address=self.address, name=self.name)
+                client = BatteryClient(
+                    address=self.address,
+                    name=self.name,
+                    request_timeout_s=self.request_timeout_s,
+                )
 
                 async def isolated_read():
                     async with client.session():
