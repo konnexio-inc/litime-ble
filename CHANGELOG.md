@@ -10,6 +10,7 @@
   - `sync()` now uses the client's own settings (e.g. `request_timeout_s`) instead of a copy with defaults
   - `read_once()` on a connected client raises a clear `RuntimeError` instead of hanging or failing mid-exchange when called from the connection's own loop, or after that loop has stopped
 - **`read_once()` on an unconnected client ignored `request_timeout_s`** ([#5](https://github.com/konnexio-inc/litime-ble/issues/5)): it built its temporary client with the default 5 s, so a silent battery stalled a read for about 15 s whatever the timeout was set to
+- **A failed BLE scan escaped as Bleak's own exception** ([#6](https://github.com/konnexio-inc/litime-ble/issues/6)): with no adapter, Bluetooth off, or the system bus unreachable, `connect()` (and so `read_once()` and `sync()`) let `BleakError` or `OSError` through. It now raises `BatteryConnectionError("scan failed: ...")`, chained from the original. Code that caught `BleakError` from these calls should catch `BatteryConnectionError`
 - **Docs**: the `sync()` example called it as `BatteryClient.sync(address=...)`, which raises `TypeError`; it is now `BatteryClient(address=...).sync()`
 
 ### Changed

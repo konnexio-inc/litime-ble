@@ -3,6 +3,7 @@ import threading
 import time
 
 import pytest
+from bleak.exc import BleakError
 
 from litime_ble.client import BatteryClient
 from litime_ble.errors import BatteryConnectionError, BatteryTimeoutError
@@ -181,3 +182,31 @@ def test_unconnected_read_once_keeps_request_timeout():
     with pytest.raises(BatteryTimeoutError):
         c.read_once()
     assert time.monotonic() - t0 < 4.0
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        BleakError("No Bluetooth adapters found."),
+        PermissionError(1, "Operation not permitted"),  # D-Bus socket refused
+    ],
+)
+@pytest.mark.parametrize("by", ["address", "name"])
+@pytest.mark.parametrize("entry", ["read_once", "sync"])
+def test_scan_failure_raises_connection_error(monkeypatch, error, by, entry):
+    import litime_ble.client as client_mod
+
+    async def failing_scan(*args, **kwargs):
+        raise error
+
+    method = "find_device_by_address" if by == "address" else "find_device_by_filter"
+    monkeypatch.setattr(client_mod.BleakScanner, method, staticmethod(failing_scan))
+    c = BatteryClient(**{by: "FA:KE:DD:RE:SS"})
+    with pytest.raises(BatteryConnectionError) as info:
+        if entry == "read_once":
+            c.read_once()
+        else:
+            with c.sync():
+                pass
+    assert info.value.__cause__ is error
+    assert not _sync_threads()

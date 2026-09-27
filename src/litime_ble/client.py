@@ -43,16 +43,21 @@ class BatteryClient:
             raise BatteryConnectionError("Provide address or name for discovery.")
 
         device = None
-        if self.address:
-            logger.info("Connecting to battery at %s", self.address)
-            device = await BleakScanner.find_device_by_address(
-                self.address, timeout=10.0
-            )
-        else:
-            logger.info("Searching for battery named '%s'", self.name)
-            device = await BleakScanner.find_device_by_filter(
-                lambda d, _: (d.name or "").strip() == self.name, timeout=10.0
-            )
+        try:
+            if self.address:
+                logger.info("Connecting to battery at %s", self.address)
+                device = await BleakScanner.find_device_by_address(
+                    self.address, timeout=10.0
+                )
+            else:
+                logger.info("Searching for battery named '%s'", self.name)
+                device = await BleakScanner.find_device_by_filter(
+                    lambda d, _: (d.name or "").strip() == self.name, timeout=10.0
+                )
+        except Exception as e:
+            # e.g. no adapter, Bluetooth off, or the system bus unreachable
+            logger.error("BLE scan failed: %s", e)
+            raise BatteryConnectionError("scan failed: %s" % e) from e
 
         if not device:
             logger.error(
