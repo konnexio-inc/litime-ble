@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 
 import pytest
 
@@ -171,3 +172,12 @@ def test_read_once_refuses_connection_from_stopped_loop():
         assert isinstance(_read_once_bounded(c), RuntimeError)
     finally:
         loop.close()
+
+
+def test_unconnected_read_once_keeps_request_timeout():
+    # No payload queued, so every attempt times out: 3 x 0.2 s, not 3 x 5 s.
+    c = BatteryClient(address="FA:KE:DD:RE:SS", request_timeout_s=0.2)
+    t0 = time.monotonic()
+    with pytest.raises(BatteryTimeoutError):
+        c.read_once()
+    assert time.monotonic() - t0 < 4.0

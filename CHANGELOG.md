@@ -9,6 +9,7 @@
   - `sync()` keeps one background event loop running for the whole block, so repeated reads reuse the connection
   - `sync()` now uses the client's own settings (e.g. `request_timeout_s`) instead of a copy with defaults
   - `read_once()` on a connected client raises a clear `RuntimeError` instead of hanging or failing mid-exchange when called from the connection's own loop, or after that loop has stopped
+- **`read_once()` on an unconnected client ignored `request_timeout_s`** ([#5](https://github.com/konnexio-inc/litime-ble/issues/5)): it built its temporary client with the default 5 s, so a silent battery stalled a read for about 15 s whatever the timeout was set to
 - **Docs**: the `sync()` example called it as `BatteryClient.sync(address=...)`, which raises `TypeError`; it is now `BatteryClient(address=...).sync()`
 
 ### Changed
